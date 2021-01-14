@@ -56,8 +56,8 @@ foreach ($custom_meta_arr as $custom_meta) {
 	]);
 };
 
-add_filter( 'register_post_type_args', 'custom_post_args_append', 10, 2 );
 // add REST support for directory listings
+add_filter( 'register_post_type_args', 'custom_post_args_append', 10, 2 );
 function custom_post_args_append( $args, $post_type ) {
 	if ( $post_type === "w2dc_listing" ) {
 		// expose listing to REST API
@@ -78,6 +78,7 @@ function listings_add_custom() {
 
 
 // expose taxonomies to REST API
+add_filter( 'register_taxonomy_args', 'custom_tax_args_append', 10, 2 );
 function custom_tax_args_append( $args, $tax_type ) {
 	if ( $tax_type == "w2dc-category" ) {
 		$args['show_in_rest'] = true;
@@ -95,4 +96,34 @@ function custom_tax_args_append( $args, $tax_type ) {
 
 	return $args;
 }
-add_filter( 'register_taxonomy_args', 'custom_tax_args_append', 10, 2 );
+
+// add REST fields to edit custom fields (listing address, contact, anything within the custom meta array above)
+add_action('rest_api_init', 'add_address_line_1');
+function add_address_line_1() {
+    register_rest_field('post',
+        '_address_line_1',
+        array(
+            'get_callback' => 'rest_get_address_line_1',
+            'update_callback' => 'rest_update_address_line_1',
+            'schema' => array(
+                                'description' => 'Address line 1',
+                                'type' => 'string',
+                                'context' => array('view', 'edit')
+                            )
+        )
+    );
+}
+
+function rest_get_address_line_1($post, $field_name, $request) {
+  // Make modifications to field name if required. 
+  return get_post_meta($post->ID, $field_name);
+}
+
+function rest_update_address_line_1($value, $post, $field_name) {
+  // Perform Validation of input
+  if (!$value || !is_string($value)) {
+    return;
+  }
+  // Update the field
+  return update_post_meta($post->ID, $field_name, $value);
+}
